@@ -1,4 +1,5 @@
 const express=require("express")
+const bcrypt=require("bcrypt")
 
 const mongoose=require("mongoose")
 const JWT_SCERET="asdc#$1235"
@@ -16,9 +17,12 @@ app.post('/signup',async(req , res)=>{
     const password=req.body.password;
     const name=req.body.name;
 
+    const hashPassword=await bcrypt.hash(password,5)
+    console.log(hashPassword)
+
     await UserModel.create({
         email:email,
-        password:password,
+        password:hashPassword,
         name:name
     }),
 
