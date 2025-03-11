@@ -1,7 +1,8 @@
 const express=require("express")
 const bcrypt=require("bcrypt")
-
+const jwt=require("jsonwebtoken")
 const mongoose=require("mongoose")
+const {z} =require("zod")
 const JWT_SCERET="asdc#$1235"
 const { UserModel } = require("./src/config.js/db")
 const auth = require("./src/middleware/auth")
@@ -13,10 +14,27 @@ const app=express()
 app.use(express.json())
 
 app.post('/signup',async(req , res)=>{
-    const email=req.body.email;
-    const password=req.body.password;
-    const name=req.body.name;
+   const requiredBody=z.object({
+    email:z.string().min(3).max(50).email(),
+    password:z.string().min(8).max(50),
+    name:z.string().min(3).max(50)
+   })
 
+   const parseDataWithSuccess=requiredBody.safeParse(req.body)
+
+   if(!parseDataWithSuccess.success){
+      res.json({
+        message:"IncorrecT format",
+        err:parseDataWithSuccess.error
+      })
+      return
+   }
+
+   const name=req.body.name;
+   const email=req.body.email;
+   const password=req.body.password;
+
+    
     const hashPassword=await bcrypt.hash(password,5)
     console.log(hashPassword)
 
@@ -37,10 +55,16 @@ app.post('/signin',async(req,res)=>{
 
     const user=await UserModel.findOne({
         email:email,
-        password:password
     })
+    if (!user){
+        res.status(403).json({
+            msg:"User doesn't exits in our DB"
+        })
+    }
+    const passwordMatch=await bcrypt.compare(password,user.password)
+
     console.log(user)
-    if(user){
+    if(passwordMatch){
         const token=jwt.sign({
             id:user._id.toString()
         },JWT_SCERET);
