@@ -1,9 +1,12 @@
 const express = require("express");
 const requestLog = require("./src/middleware/requestLogger");
+const calculator = require("./src/middleware/calculator");
 
 const app = express();
 
 app.use(requestLog);
+
+app.get('/calculate/:operation/:a/:b', calculator);
 
 
 
