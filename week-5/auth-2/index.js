@@ -1,12 +1,15 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const JWT_SCERET = "JWT-SCERET";
-
+const JWT_SECRET = "JWT-SECRET"; // Corrected typo
 const app = express();
 
 app.use(express.json());
 
 const users = [];
+
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
 
 app.post("/signup", (req, res) => {
   const username = req.body.username;
@@ -23,27 +26,39 @@ app.post("/signup", (req, res) => {
 });
 
 // adding auth middleware
-
 function auth(req, res, next) {
   const token = req.headers.token;
-  const decodeInfo = jwt.verify(token, JWT_SCERET);
-
-  if (decodeInfo.username) {
-    req.username = decodeInfo.username;
-  } else {
-    res.json({
-      msg: "You are not signed up",
+  if (!token) {
+    return res.status(401).json({
+      // Changed: Return 401 for missing token
+      msg: "Token missing",
     });
   }
-  next();
+  try {
+    // Changed: Added try-catch for verification errors
+    const decodeInfo = jwt.verify(token, JWT_SECRET);
+    if (decodeInfo.username) {
+      req.username = decodeInfo.username;
+      next();
+    } else {
+      res.json({
+        msg: "You are not signed up",
+      });
+    }
+  } catch (error) {
+    // Changed: Handle JWT errors
+    res.status(401).json({
+      msg: "Invalid or expired token",
+    });
+  }
 }
 
 app.post("/signin", (req, res) => {
   const username = req.body.username;
-  const passward = req.body.passward;
+  const password = req.body.password;
 
   const user = users.find(
-    (u) => u.username === username && u.passward === passward
+    (u) => u.username === username && u.password === password
   );
 
   if (user) {
@@ -51,8 +66,9 @@ app.post("/signin", (req, res) => {
       {
         username: user.username,
       },
-      JWT_SCERET
+      JWT_SECRET
     );
+    res.header("jwt", token);
 
     res.send({
       token: token,
@@ -71,7 +87,7 @@ app.get("/me", auth, (req, res) => {
     res.json("invalid credentials");
   } else {
     res.json({
-      user: user.username,
+      username: user.username,
       password: user.password,
     });
   }
